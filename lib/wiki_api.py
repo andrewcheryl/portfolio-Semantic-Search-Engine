@@ -71,7 +71,7 @@ class WikiSearch():
         ''' 
         self.build_corpus()
         
-        tfidf_v = TfidfVectorizer(min_df = 2, stop_words = 'english')
+        tfidf_v = TfidfVectorizer(min_df = 1, stop_words = 'english')
         dtm_sp = tfidf_v.fit_transform(self.corpus_df.extract)
         dtm_sp_index=list(self.corpus_df.index)
         
