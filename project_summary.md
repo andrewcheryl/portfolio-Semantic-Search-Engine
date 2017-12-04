@@ -5,6 +5,7 @@
 Engineer a novel wikipedia search engine.
 
 This problem can be broken down into ...
+
 - Data collection
 - Data Storage
 - Search algorithm development
@@ -21,34 +22,37 @@ All categories , pages and articles belonging to the following  wikipedia catego
 
 The raw page text and its category information should be written to a collection on a Mongo server running on a dedicated AWS instance.
 
-Data collected using Wiki Api
+Data to be collected using Wiki Api.
 
-## EDA
+## 1. EDA
 
 ### Explore structure of wiki data
 
 Wikipedia data structure...
 
-Category ( Xp , Xc)
-    Pages 
-    Categories( Xp , Xc)
-        Pages
-        Categories (Xp,Xc)
+
+- Category ( Xp , Xc)
+    -  Pages 
+        - Categories( Xp , Xc)
+            - Pages
+             - Categories (Xp,Xc)
           .....
 
 where  Xp = no. of pages , Xc = no. of subcategories
 
 * There is no maximium no. of levels.
-* Categories can belong to multiple catgories 
-* Subcatgories can exsist in multiple places within a category heirachy
+* Categories can belong to multiple categories 
+* Subcategories can exsist in multiple places within a category heirachy
 * Each page can be assigned to multiple categories/ subcategories
-* implication - large amount of duplication , extremely deep nesting of subcategories
+ 
+Implication - large amount of duplication , extremely deep nesting of subcategories possible
 
 Model Requirments:
+
 * Limit depth of search - default 2 levels of nested subcategories but allow this to be changed
-* remove duplication of subcategories before pulling pages
-* avoid duplication of pages 
-* assess no of pages before triggering load of articles and provide option to abort (this can easily be 10,000 pages with load times > an hour)
+* Remove duplication of subcategories before pulling pages
+* Avoid duplication of pages 
+* Assess no. of pages before triggering load of articles and provide option to abort (this can easily exceed 10,000 pages with load times > an hour)
 
 
 ### Explore page content
@@ -59,54 +63,65 @@ Extracts are delivered inside a nested dictionary structure with html formating.
 
 Cleaning steps:
 
-1. remove extract from dictionary
-2. use beautifulsoup to parse html
+1. Remove extract from dictionary
+2. Use beautifulsoup to parse html
 3. Clean data , lemmatuze and remove stop words
 
 Data cleaning 
-    * Remove any hypertext
-    * Remove residual html 
-    * remove formula.  - between {}
-    * Remove any characters not in 'normal' alphabet 
-    * Lemmatize text
-    * Remove stop words
+
+     Remove any hypertext
+     Remove residual html 
+     Remove formulae  ( between {} ) 
+     Remove any characters not in 'normal' alphabet 
+     Lemmatize text
+     Remove stop words
 
 
-## Model development
+## 2. Model development
 
-### Mongo Db setup
-Jupyter notebook : 00- Make-database
+### Mongo DB setup
+Jupyter notebook : 00-Make-database
 
-Wiki data is stored in a Mongo Database on a separate AWS instance.
+Wiki data will be stored in a Mongo Database on a separate AWS instance.
 
-The database is named myWiki
-information is held in 3 collections
-1. category_collection - this holds all the subcatgories that belong to the load category.
-2. page_collection - this holds all the unique pages that belong to any category that has been loaded. 
-For each page the collection record holds
-    - pageid
-    - title
-    - extract
-    - categories that a page belongs
-3. loads_collection - holds a record of whihc categories have been loaded and when ( this currently is update only when subcategories are loaded, need to add confirmation that pages where loaded)
+The database is named myWiki.
+
+Information is held in 3 collections...
+
+*1.* _category___collection_ : this holds all the subcategories that belong to the load categor.
+
+*2.*_page___collection_ : this holds all the unique pages that belong to any category that has been loaded. 
+
+    For each page the collection record holds
+        - pageid
+        - title
+        - extract
+        - categories that a page belongs
+
+*3.*_loads___collection_ : holds a record of which categories have been loaded and when ( this currently is updated only when subcategories are loaded, need to add confirmation that pages where loaded)
 
 
-### load process
+### Load process
 Jupyter notebooks: 
+
  - 01- Extract-data-Machine-Learning
  - 01- Extract-data-Business-Software
 
-Model development was first on the machine learning and then extended to business software which has much deeper levels of subcatgories.
+Model development was done first on the machine learning and then extended toed to business software which has much deeper levels of subcatgories.
 
 Final model can be run for any category.
 
 Based on findings from exploration of wiki data structure the load process was split into 3 processes.
-For requested category , lets call it load category
+
+For each requested category , lets call it load category...
+
     1. Pull all subcategories using a recursive function call. Keep cental list of subcats and remove duplication from results of each recursive function pull.
     2. Load subcategories to mongo db  - this is to provide a record of what has been loaded  
     3. Identiy unique pages for set of subcategories identifed in step 1
     4. For unique pages pull extract and category information , clean extract and load to mongodb. Data cleaning identified in EDA applied.
     
+
+Code for final model build wrapped in a Class.
 
 Class WikiAPI - functions:
 
@@ -128,31 +143,74 @@ Class WikiAPI - functions:
 Jupyter notebook : 02- Semantic-search-model-developement
 
 Seaarch process broken down into three steps:
+
 1. Build corpus - during development this was limited to a 1000 pages as running into memory issues using dataframes in order to investiagte results
-2. Build document matrix using TFidf then apply TruncatedSVD with 100 components. REview top features produced and tweak cleaning process
+2. Build document matrix using TFidf then apply TruncatedSVD with 100 components. Review of top features resulted in tweaking of cleaning process.
 3. Build search function 
     - add serach term to document term matrix (DTM) using Tfidf model fitted in step 2
     - rerun Truncated SVD on augmented DTM
     - run cosine similarity to generate top 10 related articles
 
-Issues 
-    -  size of dataframe causing lots of crashes - in final build data kept in sparse matrix until final step in search process
+Issues :
+
+    -  size of dataframe causing lots of crashes - in final build data kept in sparse matrix until final step in search process 
     -  how to assess effectiveness of search ? used visual inspection only
     -  search works well on single words , not so good on sentences or terms with multple words - need to extend model to use ngrams  - this is currently outstanding
     -  for final build step 2 reduced to document term matrix generation only
+
+Code for final model build wrapped in a Class.
+
+Class Wiki_search - functions:
+
+Document term matrix  created when class instantiated.
+Search_mywiki can then be rerun multiple times
+functions: 
+
+    __init__ -> calls build_dtm_matrix -> calls build_corpus -> returns dtm sparse matrix , dtm index and fitted tfidf
+
+     search_myWiki -> returns  top 10 related articles
+
 
 ## Predictive modeling
 TO BE COMPLETED
 
 
-## Model Build
+## 3. Model Build
 Jupyter notebook : 03- Semantic-search-model-build
 All code held in wiki_api.py
 
+Initally designed to run in Flask which has been set up with docker file with that includes instructions to download all  the python module requirements specified. 
+
+To run in standard jupyter/scipy docker container  will need to install 
+    spacy , nltk , pymongo , beautifulsoup 
+plus download spacy.en
+
+Code for final model build wrapped in a 3 Classes.
+
+Class WikiAPI - load categories , this is instantiated with the category name, there is a run flag that defaults True. When the run flag is true it will trigger the full end to end process. If the run flag is false the steps can be triggered individually - this was added for debugging and exploration.
+
+Class Wiki_Search - search enging , this require two steps... 
+
+ - Document term matrix  created when class instantiated.
+ - Search_mywiki can then be rerun multiple times
+ 
+ The document term matrix is created and kept in a sparse matrix, if takes about 5 seconds to train so it was not necessary to store as pickle and load fwhen search engine iniated. This also ensures that the dtm reflects currently loaded pages. 
 
 ### Front end web service
 Front end is currently in  jupyter notebook - '03- Semantic-search-model-build'
-THis provides a user interface to the wiki_api.py cde file.
 
-A flask front end is in developement but there are some issues wit interactivty required during category load process that need to be resolved.
+This provides a user interface to the wiki_api.py code file.
+
+A flask front end is in developement but there are some issues with interactivty required during category load process that need to be resolved.
+
+## 4. Summary
+
+There are some open points that need to be completed and there are a number of loose ends that would need to be cleaned up to make this a deployable model.
+
+Open points:
+
+    Improve search functionaliy for sentences
+    Improve data content management
+    Build functional frontend
+
 
