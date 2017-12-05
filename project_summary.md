@@ -187,29 +187,47 @@ For option 1 all data will need to be reloaded as originally considered option 2
 Jupyter notebook : 03- Semantic-search-model-build
 All code held in wiki_api.py
 
-Initally designed to run in Flask which has been set up with docker file with that includes instructions to download all  the python module requirements specified. 
+Initally designed to run in Flask which has been set up with docker file with setup to download all  the python module requirements. 
 
-To run in standard jupyter/scipy docker container  will need to install 
-    spacy , nltk , pymongo , beautifulsoup 
-plus download spacy.en
+To run in standard jupyter/scipy docker container  the following packages are required...
+    - spacy
+    - nltk
+    - pymongo
+    - beautifulsoup 
+plus download spacy.en and nltk all
+Options to install have beeb added to top of Juypter notebook
 
 Code for final model build wrapped in a 3 Classes.
 
-Class WikiAPI - load categories , this is instantiated with the category name, there is a run flag that defaults True. When the run flag is true it will trigger the full end to end process. If the run flag is false the steps can be triggered individually - this was added for debugging and exploration.
+1.Class MyWikiDB - creates connection to MongoDb when required.
 
-Class Wiki_Search - search enging , this require two steps... 
+2.Class WikiAPI - load categories , this is instantiated with the category name, there is a run flag that defaults True. When the run flag is true it will trigger the full end to end process. If the run flag is false the steps can be triggered individually - this was added for debugging and exploration.
+
+3.Class Wiki_Search - search enging , this require two steps... 
 
  - Document term matrix  created when class instantiated.
  - Search_mywiki can then be re-run multiple times
  
- The document term matrix is created and kept in a sparse matrix, if takes about 5 seconds to train so it was not necessary to store as pickle and load fwhen search engine iniated. This also ensures that the dtm reflects currently loaded pages. 
+ The document term matrix is created and kept in a sparse matrix, if takes about 5 seconds to train so it was not necessary to store as pickle and load when search engine iniated. This also ensures that the dtm reflects currently loaded pages. 
 
 ### Front end web service
 Front end is currently in  jupyter notebook - '03- Semantic-search-model-build'
 
 This provides a user interface to the wiki_api.py code file.
 
-A flask front end is in developement but there are some issues with interactivty required during category load process that need to be resolved.
+A flask front end is in developement but there are some issues with interactivity required during category load process that need to be resolved.
+
+To run flask front end...
+From project directory run
+
+        $ docker build --rm -t flask-dsi-plus .
+        $ docker run -it -p 5000:5000 -v `pwd`:/src --rm flask-dsi-plus
+
+TO access category load
+    http://127.0.0.1:5000/load_category
+
+To acess search function
+    http://127.0.0.1:5000/search_term
 
 ## 4. Summary
 
