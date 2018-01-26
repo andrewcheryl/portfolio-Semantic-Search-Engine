@@ -33,7 +33,8 @@ The Wiki API will be used to extract wikipedia content.
 3. Model Development
     - extraction process
     - search engine
-4. Model Build
+4. Test search engine performance
+5. Model Build
 
 ### Repository structure
 Folders
@@ -194,7 +195,6 @@ In early tests the size of the dtm dataframe caused lots of crashes so the devel
     - re-run Truncated SVD on augmented DTM
     - run cosine similarity to generate top 10 related aticles
     
-4. Test search engine effectiveness
 
 The code for final model build wrapped in a Class.
 
@@ -219,8 +219,23 @@ plus download spacy.en and nltk all
 
 All required packages can be installed by running the '00-Installed-Packages.ipynb' notebook.
 
+## 4. Test search engine effectiveness
+Evaluating search engine results is challening, with limited resouces I choose to use a well known and trusted search engine to provide bench mark results.
+I measured my search engine against the results found using google, with the search restricited to the en.wikipedia site.
 
-## 4. Model Build
+Google search can be restricted to a particular site using ...
+ -  ' site:en.wikipedia.org SEARCHTERM '
+ 
+Comparing the top 10 results (where available from google) I tested..
+1. overall effectiveness of search engine 
+2. 3 different sets of hyperparatmeters for creating the document term matrix using the Tfidf algorithm. 
+
+On average my search engine found 3 of the top 5 results from google. This was a good performance given the google search was over the entire en.wikipedia content. Many of the items not picked up where not included in the MongoDB content.
+
+The full results are in provided in the excel workbook  search-engine-tests.xlsx
+
+
+## 5. Model Build
 - Jupyter notebook : 05-Model-Build-Extraction-and-Semantic-search.ipynb
 - Python code  : wiki_api.py
 
