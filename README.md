@@ -1,8 +1,8 @@
 # Portfolio project : Novel Semantic Search Engine for Wikipedia Articles
 
 ## Problem Statement
-Extract Wikipedia articles from a named Category.
-Engineer a novel wikipedia search engine.
+1. Extract Wikipedia articles from a named Category.
+2. Engineer a novel wikipedia search engine.
 
 This problem can be broken down into ...
 
@@ -13,16 +13,18 @@ This problem can be broken down into ...
 
 ## Scope of data for search engine
 
-All sub-categories , pages and articles belonging to the following wikipedia categories:
+All sub-categories , pages and articles belonging to the following wikipedia categories...
 
 * [Machine Learning](https://en.wikipedia.org/wiki/Category:Machine_learning)
 * [Business Software](https://en.wikipedia.org/wiki/Category:Business_software)
 
-The raw page text and its category information should be written to a collection on a Mongo server running on a dedicated AWS instance.
+The raw page text and its category information will be written to a collection on a Mongo DB server running on a dedicated AWS instance. 
+
+A Mongo DB was chosen because it holds information in a JSON like format that is easy to work with using a python dictionary.  
 
 Code should be able to pick up any addtional categories if requested.
 
-Data to be collected using the Wiki Api.
+The Wiki API will be used to extract wikipedia content.
 
 ## Project structure 
 
@@ -112,7 +114,7 @@ Wiki data will be stored in a Mongo Database on a separate AWS instance.
 6. Run docker image to create a docker container
 
 ### Mongo DB setup
-Jupyter notebook : 01-Make-database
+Jupyter notebook : 01-Make-database.ipynb
 
 The database is named myWiki.
 
@@ -146,21 +148,20 @@ Jupyter notebooks:
  - 02-Develop-and-test-data-cleaning.ipynb
  - 03-Develop-extraction-process.ipynb
 
-Model development was done for a one small category first with 255 pages.
+A small test category was used for the model development process. The full 5800 from the two specified categories was only loaded once model was working correctly.
 
-Final model can be run for any category.
+Based on findings from the exploration of the wiki data structure the category load process was split into 4 parts ...
 
-Based on findings from exploration of wiki data structure the load process was split into 3 processes.
+1. Pull all subcategories using a recursive function call. A list of all subcategories was kept and a check for any duplication performed before any further action.
+2. Write a record of loaded subcategories to the mongo db.
+3. Identiy unique pages for unique set of subcategories identifed in step 1
+4. For each unique pages pull extract and category information , clean extract and load to mongodb. 
 
-For each requested category , lets call it the load category...
 
-1. Pull all subcategories using a recursive function call. Keep cental list of subcats and remove duplication from results of each recursive function pull.
-2. Load subcategories to mongo db  - this is to provide a record of what has been loaded  
-3. Identiy unique pages for set of subcategories identifed in step 1
-4. For unique pages pull extract and category information , clean extract and load to mongodb. Data cleaning process tested and final version chosen for model build.
+Establishing the data cleaning criteria was an interative process. The the intial step the cleaned extract was reviewed and the criteria tweake , then as a second step  the document term matrix created for the search engine was  reviewed and further tweaks added.
     
 
-Code for final model build wrapped in a Class.
+The code for final model was wrapped in a the following class.
 
 Class WikiAPI - functions:
 
@@ -181,14 +182,12 @@ Class WikiAPI - functions:
 ### Search algorithm development
 Jupyter notebook : 04-Develop-Semantic-search-process.ipynb
 
-Seaarch process broken down into three steps:
+The development of the search process was broken down into four steps:
 
-1. Build corpus - during development this was limited to a test set of 255 pages so that dtm could be loaded into a dataframe for inspection.
-
-Issues encounted:
--  size of dtm dataframe causing lots of crashes - in final build data kept in sparse matrix until final step to present search results. 
+1. Build corpus - during development this was limited to a test set of 255 pages so that dtm could be loaded into a dataframe for inspection. 
 
 2. Build document matrix using Tfidf then apply TruncatedSVD with 200 components. Review of top features resulted in tweaking of cleaning process.
+In early tests the size of the dtm dataframe caused lots of crashes so the development process was restricted to a smaller test set. In the final model data is kept in a sparse matrix until the final step to present search results. 
 
 3. Build search function 
     - add search term to document term matrix (DTM) using Tfidf model fitted in step 2. 
@@ -197,9 +196,7 @@ Issues encounted:
     
 4. Test search engine effectiveness
 
-
-
-Code for final model build wrapped in a Class.
+The code for final model build wrapped in a Class.
 
 Class Wiki_search - functions:
 
@@ -213,22 +210,23 @@ functions:
 
 ### Python package requirements
 To run in a standard jupyter/scipy docker container  the following packages are required...
+
     - spacy
     - nltk
     - pymongo
     - beautifulsoup 
 plus download spacy.en and nltk all
 
-All required packages can be installed by running 00-Installed-Packages.ipynb 
+All required packages can be installed by running the '00-Installed-Packages.ipynb' notebook.
 
 
 ## 4. Model Build
-Jupyter notebook : 05-Model-Build-Extraction-and-Semantic-search.ipynb
-Python code  : wiki_api.py
+- Jupyter notebook : 05-Model-Build-Extraction-and-Semantic-search.ipynb
+- Python code  : wiki_api.py
 
 The code was designed so that it could be held in a single python file to enable deployment using a 'Flask micro web framework'. However , the category extraction process can result in a large number of pages being pulled and can take hours to complete. In order to provide feedback duing the extraction process, and an option to abort the load process, the front end was built in a jupyter notebook instead.  
 
-Code for final model build wrapped in a 3 Classes.
+The code for the final model is wrapped into 3 Classes...
 
 1.Class MyWikiDB - creates connection to MongoDb when required.
 
@@ -239,7 +237,7 @@ Code for final model build wrapped in a 3 Classes.
  - Document term matrix  created when class instantiated.
  - Search_mywiki can then be re-run multiple times
  
- The document term matrix is created and kept in a sparse matrix, if takes about 5 seconds to train so it was not necessary to store as pickle and load when search engine iniated. This also ensures that the dtm reflects currently loaded pages. 
+ The document term matrix is created and kept in a sparse matrix, if takes about 45 seconds to train when populated with the full 5800 pages but only needs to be trained once per 'search' session. 
 
 
 
