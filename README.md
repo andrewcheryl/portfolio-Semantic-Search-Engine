@@ -1,76 +1,249 @@
-# Semantic Search
+# Portfolio project : Novel Semantic Search Engine for Wikipedia Articles
 
-## The Task
-The objective of this assignment is to engineer a novel wikipedia search engine using what you've learned about data collection, infrastructure, and natural language processing.
+## Problem Statement
+Extract Wikipedia articles from a named Category.
+Engineer a novel wikipedia search engine.
 
-The task has two **required sections:**
+This problem can be broken down into ...
+
 - Data collection
+- Data Storage
 - Search algorithm development
+- User Interface
 
-And one **optional section:** 
-  - Predictive modeling
+## Scope of data for search engine
 
-![](http://interactive.blockdiag.com/image?compression=deflate&encoding=base64&src=eJxdjrsOwjAMRXe-wlsmRhaQkDoiMSDxBW5slahtHDmGCiH-nfQxtKy-59zruhPfUsAGPjsA56XvMdIRSIbYCZKD_RncENqQuGBQ3S7TidCwxsynjZUZ1T8m4HqvJlXZnhrBJMHBbWlTDHEeSFravYUXQy_E3TKrwbioMKb5z16UmRxfXZurVY_GjegbhqJIjaXm-wNmzE4W)
-
-### Part 1 -- Collection (required)
-
-We want you to query the wikipedia API and **collect all of the articles** under the following wikipedia categories:
+All sub-categories , pages and articles belonging to the following wikipedia categories:
 
 * [Machine Learning](https://en.wikipedia.org/wiki/Category:Machine_learning)
 * [Business Software](https://en.wikipedia.org/wiki/Category:Business_software)
 
 The raw page text and its category information should be written to a collection on a Mongo server running on a dedicated AWS instance.
 
-We want your code to be modular enough that any valid category from Wikipedia can be queried by your code. You are encouraged to exploit this modularity to pull additional wikipedia categories beyond ML and Business Software. As always, the more data the better. 
+Code should be able to pick up any addtional categories if requested.
 
-**Note:** Both "Machine Learning" and "Business Software" contain a heirarchy of nested sub-categories. Make sure that you pull every single page within each parent category, not just those directly beneath them. Take time to explore wikipedia's organization structure. It is up to you if you want to model this heirarchy anywhere within Mongo, otherwise flatten it by only recording the parent category associated with each page.
+Data to be collected using the Wiki Api.
 
-**optional**  
-Make it so that your code can be run via a python script e.g.
+## Project structure 
 
-```bash
-$ docker run --rm -v $(pwd):/home/jovyan jupyter/scipy-notebook python download.py #SOME_CATEGORY#
-```
-This docker command starts a disposable scipy-notebook container for one-time use to run your script, `download.py`. Where `#SOME_CATEGORY#` is the wikipedia category to be downloaded. Read about passing arguments to python scripts here: https://docs.python.org/3/library/sys.html. 
+1. EDA
+2. Database set up
+3. Model Development
+    - extraction process
+    - search engine
+4. Model Build
 
-**optional**  
-Make it so that your code can query nested sub-categories e.g.
+### Repository structure
+Folders
+- ipybn - Jupyter notebooks
+- lib - python files
 
-```bash
-$ docker run --rm -v $(pwd):/home/jovyan jupyter/scipy-notebook python download.py #SOME_CATEGORY# #NESTING_LEVEL#
-```
+Project information files
+- search_engine_tests.xlsx
+- README.md
 
-### Part 2 -- Search (required)
+## 1. EDA
+### Explore structure of wiki data
 
-Use Latent Semantic Analysis to search your pages. Given a search query, find the top 5 related articles to the search query. SVD and cosine similarity are a good place to start. 
+Wikipedia data structure...
 
-**optional**  
-Make it so that your code can be run via a python script e.g.
 
-```bash
-$ docker run --rm -v $(pwd):/home/jovyan jupyter/scipy-notebook python search.py #SOME_TERM#
-```
+- Category ( Xp , Xc)
+  - Pages 
+  - Categories( Xp , Xc)
+      - Pages
+      - Categories (Xp,Xc)
+          .....
 
-### Part 3 -- Predictive Model (optional)
+where  Xp = no. of pages , Xc = no. of subcategories
 
-In this part, we want you to build a predictive model from the data you've just indexed. Specifically, when a new article from wikipedia comes along, we would like to be able to predict what category the article should fall into. We expect a training script of some sort that is runnable and will estimate a model. 
+* There is no maximium no. of levels.
+* Subcategories can belong to multiple categories/subcategories
+* Subcategories can exsist in multiple places within one category heirachy
+* Each page can be assigned to multiple categories/ subcategories and multiple times within one category heirachy.
+ 
+Implication - large amount of duplication , extremely deep nesting of subcategories possible
 
-Make it so that your code can be run via a python script e.g.
+Model Requirements:
 
-```bash
-$ docker run --rm -v $(pwd):/home/jovyan jupyter/scipy-notebook python train.py
-```
+* Limit depth of search - default 2 levels of nested subcategories but allow this to be changed
+* Remove duplication of subcategories before pulling pages
+* Avoid duplication of pages 
+* Assess no. of pages before triggering load of articles and provide option to abort (this can easily exceed 10,000 pages with load times > an hour)
 
-Finally, you should be able to pass the url of a wikipedia page and it will generate a prediction for the best category for that page, along with a probability of that being the correct category. 
 
-Make it so that your code can be run via a python script e.g.
+### Explore page content
 
-```bash
-$ docker run --rm -v $(pwd):/home/jovyan jupyter/scipy-notebook python predict.py #URL#
-```
+Pages have multiple elements. We are interested in article text and which categories pages belong too. To limit information pulled restrict wiki api queries to 'extract' and 'categories'.
 
-## Infrastructure
+Extracts are delivered inside a nested dictionary structure with html formating. 
 
-We recommend that you run a MongDB server on a dedicated t2.micro instance. Feel free to run your Jupyter environment either on another instance or locally.
+Cleaning steps:
+
+1. Remove extract from dictionary
+2. Use beautifulsoup to parse html
+3. Clean data, lemmatize and remove stop words
+
+Data cleaning 
+
+     Remove any hypertext
+     Remove residual html 
+     Remove formulae  ( between {} ) 
+     Remove any characters not in 'latin' alphabet 
+     Remove single characters 
+     Lemmatize text
+     Remove stop words
+
+
+## 2. Database setup
+
+Wiki data will be stored in a Mongo Database on a separate AWS instance.
+
+### Prepare AWS server
+1. Create EC2 t2.micro instance required with Ubuntu 16.04 image
+2. Set up security group and open ports ...
+ - 22  - to accept SSH traffic
+ - 2376 - to accept inbound traffic from anywhere , used to pull images from Docker Hub
+ - 27016  - to accept inbound traffic from amywhere, used to connect with MongoDB
+ 
+3. Install Docker app
+4. Pull Mongo docker image from Docker Hub 
+5. Create a new data volume for the Mongo database store
+6. Run docker image to create a docker container
+
+### Mongo DB setup
+Jupyter notebook : 01-Make-database
+
+The database is named myWiki.
+
+Information is held in 3 collections...
+
+*1.* _category___collection_ : this holds all the subcategories that belong to the load category.
+
+*2.*_pagetest___collection_ : this will hold a small test set of pages that can be used in development process to test extraction and cleaning process. 
+
+*3.*_page___collection_ : this holds all the unique pages that belong to any category that has been loaded. 
+
+For each page the collection record holds
+  
+  - pageid
+  - title
+  - extract
+  - list of categories that a page belongs to
+
+*4.*_loads___collection_ : holds a record of which categories have been loaded and when ( this currently is updated only when subcategories are loaded, need to add confirmation that related pages where loaded)
+
+*5.*_pageload___collection_ : holds a record of which categories have been loaded and when ( this currently is updated only when subcategories are loaded, need to add confirmation that related pages where loaded)
+
+Some addtional items where added to the end of this jupyter notebook to enable management of database content.
+
+
+## 3. Model Development
+
+### Load process
+Jupyter notebooks: 
+
+ - 02-Develop-and-test-data-cleaning.ipynb
+ - 03-Develop-extraction-process.ipynb
+
+Model development was done for a one small category first with 255 pages.
+
+Final model can be run for any category.
+
+Based on findings from exploration of wiki data structure the load process was split into 3 processes.
+
+For each requested category , lets call it the load category...
+
+1. Pull all subcategories using a recursive function call. Keep cental list of subcats and remove duplication from results of each recursive function pull.
+2. Load subcategories to mongo db  - this is to provide a record of what has been loaded  
+3. Identiy unique pages for set of subcategories identifed in step 1
+4. For unique pages pull extract and category information , clean extract and load to mongodb. Data cleaning process tested and final version chosen for model build.
+    
+
+Code for final model build wrapped in a Class.
+
+Class WikiAPI - functions:
+
+    'wiki_cats'  -> calls 'pull_wiki_data' -> calls 'read_categories' -> 
+    returns unique list of subcategories & ids,
+    writes subcategories to self.subcategories ready to load
+    
+    'write_subcats_to_mongo' -> writes contents of self.subcats to 
+    category collection in mongodb
+    
+    'wiki_pages' -> calls 'pull_wiki_data' - > calls 'read_pages' -> 
+    returns unique no. pages & no. duplicates,
+    results written to self.pages ready for 'load_articles'
+    
+    'load_articles' -> calls 'read_articles' -> calls 'pull_wiki_page' & 'cleaner'
+
+
+### Search algorithm development
+Jupyter notebook : 04-Develop-Semantic-search-process.ipynb
+
+Seaarch process broken down into three steps:
+
+1. Build corpus - during development this was limited to a test set of 255 pages so that dtm could be loaded into a dataframe for inspection.
+
+Issues encounted:
+-  size of dtm dataframe causing lots of crashes - in final build data kept in sparse matrix until final step to present search results. 
+
+2. Build document matrix using Tfidf then apply TruncatedSVD with 200 components. Review of top features resulted in tweaking of cleaning process.
+
+3. Build search function 
+    - add search term to document term matrix (DTM) using Tfidf model fitted in step 2. 
+    - re-run Truncated SVD on augmented DTM
+    - run cosine similarity to generate top 10 related aticles
+    
+4. Test search engine effectiveness
+
+
+
+Code for final model build wrapped in a Class.
+
+Class Wiki_search - functions:
+
+Document term matrix  created when class instantiated.
+Search_mywiki can then be rerun multiple times
+functions: 
+
+    __init__ -> calls build_dtm_matrix -> calls build_corpus -> returns dtm sparse matrix , dtm index and fitted tfidf
+
+     search_myWiki -> returns  top 10 related articles
+
+### Python package requirements
+To run in a standard jupyter/scipy docker container  the following packages are required...
+    - spacy
+    - nltk
+    - pymongo
+    - beautifulsoup 
+plus download spacy.en and nltk all
+
+All required packages can be installed by running 00-Installed-Packages.ipynb 
+
+
+## 4. Model Build
+Jupyter notebook : 05-Model-Build-Extraction-and-Semantic-search.ipynb
+Python code  : wiki_api.py
+
+The code was designed so that it could be held in a single python file to enable deployment using a 'Flask micro web framework'. However , the category extraction process can result in a large number of pages being pulled and can take hours to complete. In order to provide feedback duing the extraction process, and an option to abort the load process, the front end was built in a jupyter notebook instead.  
+
+Code for final model build wrapped in a 3 Classes.
+
+1.Class MyWikiDB - creates connection to MongoDb when required.
+
+2.Class WikiAPI - load categories , this is instantiated with the category name, there is a run flag that defaults True. When the run flag is true it will trigger the full end to end process. If the run flag is false the steps can be triggered individually - this was added for debugging and exploration.
+
+3.Class Wiki_Search - search enging , this require two steps... 
+
+ - Document term matrix  created when class instantiated.
+ - Search_mywiki can then be re-run multiple times
+ 
+ The document term matrix is created and kept in a sparse matrix, if takes about 5 seconds to train so it was not necessary to store as pickle and load when search engine iniated. This also ensures that the dtm reflects currently loaded pages. 
+
+
+
+
+
 
 

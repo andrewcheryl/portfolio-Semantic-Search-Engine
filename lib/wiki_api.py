@@ -24,9 +24,33 @@ from sklearn.metrics.pairwise import cosine_similarity
 class MyWikiDB():
     
     def __init__(self):
-        self.client=pymongo.MongoClient('34.216.54.230', 27016)
+        self.client=pymongo.MongoClient('52.42.152.84', 27016)
         self.dbr=self.client.myWiki
 
+    def check_data_loaded(self):
+        ''' ouput dataframe of categories and pages loaded'''
+        
+        loads_cllr=self.dbr.loads_collection
+        cursor=loads_cllr.find()
+        cdocs=pd.DataFrame(list(cursor))
+        try:
+            cdocs=cdocs.drop('_id',1)
+        except:
+            cdocs        
+        display(cdocs)
+        
+        pageload_cllr=self.dbr.pageload_collection
+        cursor=pageload_cllr.find()
+        pdocs=pd.DataFrame(list(cursor))
+        try:
+            pdocs=pdocs.drop('_id',1)
+        except:
+            pdocs        
+        display(pdocs)
+        
+        return 
+        
+        
 class WikiSearch():
     
     '''
@@ -137,11 +161,13 @@ class WikiAPI():
     results written to self.pages ready for 'load_articles'
     
     'load_articles' -> calls 'read_articles' -> calls 'pull_wiki_page' & 'cleaner'
+    'load_articles_test' - loads to pagetest collection  - version for testing during development
     """    
 
     
-    def __init__(self, cat_name,run=True):
+    def __init__(self, cat_name,depth=2, run=True):
         self.cat_name=cat_name
+        self.depth=depth
         self.pages=[]
         self.subcats=[]
         nltk.download('stopwords')
@@ -173,6 +199,7 @@ class WikiAPI():
         
         if cat_name=='head':
             cat_name=self.cat_name
+            depth=self.depth
             try:
                 subcats_r = self.read_categories(self.pull_wiki_data(cat_name))
             except:
@@ -267,7 +294,35 @@ class WikiAPI():
         cats_loaded_cllr.insert_one(cat_loaded)
             
         return print('subcategories added {}, duplicates not loaded {}'. format(added, dropped))
-  
+ 
+    def load_articles_test(self):
+        ''' 
+        TEST version - used for testing load process and semantic search developement
+        for each page add article info and load to Mongo page collection
+        collections primary key = pageid  , if page exists it will not be added
+        '''
+        d=0
+        myWiki=MyWikiDB()
+        pagetest_cllr=myWiki.dbr.pagetest_collection
+        start=pagetest_cllr.find().count()
+        i=0
+        for page in self.pages:
+            i+=1
+            print('loading page {}, {}'.format(i, page['title']))
+            try:
+                pagetest_cllr.insert_one(self.read_articles(page))
+                #print('loaded',page)
+            except:
+                #print('not loaded',page)
+                d+=1
+        end=pagetest_cllr.find().count()   
+ 
+        #record pages loaded plus date in mongoDB
+        pages_loaded={'master_cat': self.cat_name , 'pages_added':(end-start), 'loaded':time.strftime("%c")}
+        pages_loaded_cllr=myWiki.dbr.pagetestload_collection
+        pages_loaded_cllr.insert_one(pages_loaded)
+
+        return print('pages added {}, duplicates droped {}'. format(end-start,d)) 
 
     def load_articles(self):
         ''' 
@@ -284,11 +339,14 @@ class WikiAPI():
             print('loading page {}, {}'.format(i, page['title']))
             try:
                 page_cllr.insert_one(self.read_articles(page))
-                #print('loaded',page)
             except:
-                #print('not loaded',page)
                 d+=1
-        end=page_cllr.find().count()   
+        end=page_cllr.find().count()
+        
+        #record pages loaded plus date in mongoDB
+        pages_loaded={'master_cat': self.cat_name , 'pages_added':(end-start), 'loaded':time.strftime("%c")}
+        pages_loaded_cllr=myWiki.dbr.pageload_collection
+        pages_loaded_cllr.insert_one(pages_loaded)
  
         return print('pages added {}, duplicates droped {}'. format(end-start,d))
         
@@ -356,16 +414,15 @@ class WikiAPI():
         API query and add to page dict
         '''
         data, cats=self.pull_wiki_page(page['title'])
-        #print('2 - data',data)
+  
         # first data clean - extract from json query and parse html
         article=data['query']['pages'][str(page['pageid'])]['extract']
-        #print('3 - article',article)
         soup = BeautifulSoup(article, 'html.parser')
         extract=soup.get_text()
-        #print('4 -extract ',extract)
+ 
         # 2nd data clean including lemmatization and stop words
         extract_clean=self.cleaner(extract)
-        #print('5 - extract_clean',extract_clean)
+        
         cats_p=[c['title'] for c in cats['query']['pages'][str(page['pageid'])]['categories']]
 
         page['category_list']=cats_p
@@ -377,7 +434,7 @@ class WikiAPI():
         return page
     
     
-    def cleaner(self,text):
+    def cleaner_old(self,text):
         ''' Clean text data, apply spacy lemmatization and nltk stop words'''
         text = re.sub('<* />','',text)
         text = re.sub('<.*>.*</.*>','', text)
@@ -389,3 +446,14 @@ class WikiAPI():
                     if i.orth_ not in self.nltk_stop)
         text = ' '.join(text.split())
         return text
+    
+    def cleaner(self,text):
+        ''' Clean text data, apply spacy lemmatization and nltk stop words'''
+        text = re.sub('{.*}',' ',text)
+        text = re.sub('[^a-zA-Z ]',' ',text) # remove numbers and characters not in latin alphabet 
+        text = ' '.join(i.lemma_ for i in self.nlp(text)
+                    if i.lemma_ not in self.nltk_stop)
+        text = re.sub('-PRON-',' ',text)  # added by spacy lemmatization ?? - remove
+        text = ' '.join(i for i in text.split() if len(i)!=1)  # remove redundant spaces and individual letters
+        return text
+    
