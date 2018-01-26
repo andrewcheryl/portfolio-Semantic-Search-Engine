@@ -1,6 +1,6 @@
 # Portfolio project : Novel Semantic Search Engine for Wikipedia Articles
 
-## Problem Statement
+## The Problem Statement
 1. Extract Wikipedia articles from a named Category.
 2. Engineer a novel wikipedia search engine.
 
@@ -35,15 +35,6 @@ The Wiki API will be used to extract wikipedia content.
     - search engine
 4. Test search engine performance
 5. Model Build
-
-### Repository structure
-Folders
-- ipybn - Jupyter notebooks
-- lib - python files
-
-Project information files
-- search_engine_tests.xlsx
-- README.md
 
 ## 1. EDA
 ### Explore structure of wiki data
@@ -220,14 +211,14 @@ plus download spacy.en and nltk all
 All required packages can be installed by running the '00-Installed-Packages.ipynb' notebook.
 
 ## 4. Test search engine effectiveness
-Evaluating search engine results is challening, with limited resouces I choose to use a well known and trusted search engine to provide bench mark results.
+Evaluating search engine results is challenging, with limited resouces I choose to use a well known and trusted search engine to provide bench mark results.
 I measured my search engine against the results found using google, with the search restricited to the en.wikipedia site.
 
 Google search can be restricted to a particular site using ...
  -  ' site:en.wikipedia.org SEARCHTERM '
  
 Comparing the top 10 results (where available from google) I tested..
-1. overall effectiveness of search engine 
+1. The overall effectiveness of my search engine 
 2. 3 different sets of hyperparatmeters for creating the document term matrix using the Tfidf algorithm. 
 
 On average my search engine found 3 of the top 5 results from google. This was a good performance given the google search was over the entire en.wikipedia content. Many of the items not picked up where not included in the MongoDB content.
