@@ -34,15 +34,15 @@ Latent semantic analysis (LSA) will be used to develop the search algorithm. Thi
 
 3 key steps to creating the search engine:
 
-1. Construct an occurrence matrix from the corpus of documents (referred to as a document term matrix or dtm) containing word counts per document. The matrix uses rows represent to unique words and columns to represent each document. It is constructed as a sparse matrix. The elements of the matrix are weighted, using Tf-idf, to reflect the importance of the words in the corpus. 
+1. Construct an occurrence matrix from the corpus of documents (referred to as a document term matrix or dtm) containing word counts per document. The matrix uses rows to represent unique words and columns to represent each document. It is constructed as a sparse matrix. The elements of the matrix are weighted, using Tf-idf, to reflect the importance of the words in the corpus. 
 
 Tf-idf stands for term frequency-inverse document frequency. It is is a statistical measure used to evaluate how important a word is to a document in a collection or corpus. The weight of a term that occurs in a document is simply proportional to the term frequency.
 
-2. Apply LSA - The document term matrix has very high dimensionality, so a mathematical technique called singular value decomposition (SVD) is used to reduce the number of rows while preserving the similarity structure among columns. Specifically, we will use scikit learns TruncatedSVD algorithm that only computes the 'k' largest singular values. The resulting LSA matrix will use rows to represent the documents and columns to represent the 'components' of the lower dimensional space.
+2. Apply Latent semantic analysis (LSA) - The document term matrix has very high dimensionality, so a mathematical technique called singular value decomposition (SVD) is used to reduce the number of rows while preserving the similarity structure among columns. Specifically, we will use scikit learns TruncatedSVD algorithm that only computes the 'k' largest singular values. The resulting LSA matrix will use rows to represent the documents and columns to represent the 'components' of the lower dimensional space.
 
 3. The similarity between two documents in the LSA matrix is measured by taking the cosine of the angle between the two vectors (or the dot product between the normalizations of the two vectors) formed by the two rows for the specified documents. Values close to 1 represent very similar components while values close to 0 represent very dissimilar components.
 
-Note:  To analyze a search term it must be included in this LSA matrix. This requires that each search term is appended to the document term matrix and the LSA matrix recalculated.
+Note:  To analyze a search term it must be included in the LSA matrix. This requires that each search term is appended to the document term matrix and the LSA matrix recalculated.
 
 
 
@@ -252,6 +252,9 @@ Comparing the top 10 results (where available from google) I tested..
 2. 3 different sets of hyperparatmeters for creating the document term matrix using the Tfidf algorithm. 
 
 On average my search engine found 3 of the top 5 results from google. This was a good performance given the google search was over the entire en.wikipedia content. Many of the items not picked up where not included in the MongoDB content.
+
+![](search_engine_test.png)
+
 
 The full results are in provided in the excel workbook  search-engine-tests.xlsx
 
